@@ -171,6 +171,61 @@ The coordinator tracks work automatically. It detects your setup:
 └── retros/             # Retro notes per task
 ```
 
+## Enforcement Hooks
+
+The workflow rules aren't just guidelines — they're enforced by Claude Code hooks that block violations in real-time.
+
+### What Gets Enforced
+
+| Hook | Event | What It Does |
+|------|-------|-------------|
+| `enforce-tdd.sh` | PreToolUse (Write/Edit) | Blocks writing implementation code during Phase 3 (Red). Only test files allowed. Blocks all code during Phases 0-2. |
+| `enforce-test-before-fix.sh` | PreToolUse (Write/Edit) | During Phase 5, blocks implementation edits unless a test file was the most recent change. Forces "failing test first, then fix." |
+| `enforce-phase-gate.sh` | PreToolUse (Write/Edit) | Blocks code changes when task status is `awaiting-approval`. Enforces user approval gates. |
+| `enforce-no-direct-impl.sh` | PreToolUse (Write/Edit) | Blocks the coordinator from writing code directly. Only subagents (with `agent_id`) can write code files. |
+| `enforce-research-first.sh` | PreToolUse (Agent) | Blocks spawning implementer/frontend-dev agents if no research brief artifact exists for the active task. |
+| `enforce-regression.sh` | PostToolUse (Bash) | Warns when running targeted tests during Phase 5 — reminds that full regression must pass before phase exit. |
+| `update-task-state.sh` | PostToolUse (Agent) | Logs agent invocations per phase for DA coverage tracking. Updates task file timestamps. |
+| DA coverage check | Stop (prompt) | LLM-based check that the devil's advocate was invoked in the current phase before concluding. |
+| State update check | Stop (prompt) | LLM-based check that the task file was updated after phase transitions. |
+| Agent output review | SubagentStop (prompt) | LLM-based review of agent work: test quality (behavior vs implementation), minimum code rule, DA format compliance. |
+| Project state loader | SessionStart | Loads and displays active project state at session start. |
+
+### How Hooks Work
+
+Hooks intercept Claude Code tool calls and can **block** them (exit code 2) or **warn** (exit code 0 with stderr message):
+
+```
+Claude wants to edit src/App.tsx
+  → enforce-tdd.sh checks: Is the task in Phase 3 (Red)?
+  → YES → exit 2: "TDD VIOLATION: Only test files allowed in Phase 3"
+  → Claude is blocked, must write tests first
+```
+
+```
+Claude is about to stop responding
+  → DA coverage prompt checks: Was devils-advocate spawned this phase?
+  → NO → "DA VIOLATION: Spawn the devils-advocate before concluding"
+  → Claude continues, spawns DA
+```
+
+### Installing Hooks in a Project
+
+After running `./install.sh`, enable hooks per-project:
+
+```bash
+cd ~/your-project
+mkdir -p .claude/hooks
+cp ~/.claude/hooks/*.sh .claude/hooks/
+cp ~/.claude/settings.json .claude/settings.json
+```
+
+Or use project-level settings only (`.claude/settings.json` in your repo).
+
+### Disabling Individual Hooks
+
+Remove or comment out the specific hook entry in your `.claude/settings.json`. Each hook is independent.
+
 ## Customization
 
 ### Swap models
@@ -211,6 +266,7 @@ claude-swarm-config/
 ├── install.sh                 # Installation script
 ├── coordinator-prompt.md      # The coordinator system prompt
 ├── config.json                # Claude Code config (teammate preferences)
+├── settings.json              # Hook configuration for enforcement
 ├── agents/                    # Agent definitions
 │   ├── architect.md
 │   ├── browser-qa-tester.md
@@ -223,6 +279,15 @@ claude-swarm-config/
 │   ├── tester.md
 │   ├── ui-designer.md
 │   └── ux-designer.md
+├── hooks/                     # Enforcement hook scripts
+│   ├── enforce-tdd.sh         # Block impl code before tests
+│   ├── enforce-test-before-fix.sh  # Require test before bug fix
+│   ├── enforce-phase-gate.sh  # Block code during approval gates
+│   ├── enforce-no-direct-impl.sh   # Coordinator can't write code
+│   ├── enforce-research-first.sh   # Research before implementation
+│   ├── enforce-regression.sh  # Regression reminders in Phase 5
+│   ├── enforce-da-required.sh # DA coverage documentation
+│   └── update-task-state.sh   # Track agent invocations
 └── examples/                  # Example project state files
     ├── PROJECT.md
     ├── BACKLOG.md

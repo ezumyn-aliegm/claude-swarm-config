@@ -32,6 +32,25 @@ else
     echo "Copied config.json"
 fi
 
+# Copy hooks
+echo "Copying enforcement hooks..."
+mkdir -p "$CLAUDE_DIR/hooks"
+cp "$SCRIPT_DIR/hooks/"*.sh "$CLAUDE_DIR/hooks/"
+chmod +x "$CLAUDE_DIR/hooks/"*.sh
+echo "  Copied $(ls "$SCRIPT_DIR/hooks/"*.sh | wc -l | tr -d ' ') hooks"
+
+# Install settings.json (project-level — copy to current project or user-level)
+echo ""
+echo "Hook settings (settings.json):"
+if [ -f "$CLAUDE_DIR/settings.json" ]; then
+    echo "  WARNING: $CLAUDE_DIR/settings.json already exists."
+    echo "  Hooks configuration saved to: $SCRIPT_DIR/settings.json"
+    echo "  Merge manually into your existing settings.json."
+else
+    cp "$SCRIPT_DIR/settings.json" "$CLAUDE_DIR/settings.json"
+    echo "  Copied settings.json to $CLAUDE_DIR/settings.json"
+fi
+
 # Detect shell config file
 SHELL_RC=""
 if [ -f "$HOME/.zshrc" ]; then
@@ -66,6 +85,12 @@ fi
 
 echo ""
 echo "Installation complete!"
+echo ""
+echo "To enable hooks in a project, copy hooks into the project:"
+echo "  cd ~/your-project"
+echo "  mkdir -p .claude/hooks"
+echo "  cp ~/.claude/hooks/*.sh .claude/hooks/"
+echo "  cp ~/.claude/settings.json .claude/settings.json"
 echo ""
 echo "Usage:"
 echo "  source $SHELL_RC    # reload shell (or open new terminal)"

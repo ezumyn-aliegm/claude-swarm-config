@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.1.0] - 2026-03-31
+
+### Added
+- Enforcement hooks system with 8 shell hooks + 3 prompt-based hooks
+- `enforce-tdd.sh` — blocks implementation code during test-writing phases
+- `enforce-test-before-fix.sh` — requires failing test before bug fixes in Phase 5
+- `enforce-phase-gate.sh` — blocks code changes during approval gates
+- `enforce-no-direct-impl.sh` — prevents coordinator from writing code directly
+- `enforce-research-first.sh` — blocks implementation agents without research brief
+- `enforce-regression.sh` — warns about targeted tests needing full regression
+- `update-task-state.sh` — tracks agent invocations for DA coverage
+- Prompt-based hooks: DA coverage check, state update check, agent output review
+- `settings.json` with full hook configuration
+- Updated install script to copy hooks and settings
+
 ## [1.0.0] - 2026-03-31
 
 ### Added

@@ -1,0 +1,112 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash $CLAUDE_PROJECT_DIR/.claude/hooks/enforce-tdd.sh",
+            "timeout": 5,
+            "statusMessage": "Checking TDD compliance..."
+          },
+          {
+            "type": "command",
+            "command": "bash $CLAUDE_PROJECT_DIR/.claude/hooks/enforce-test-before-fix.sh",
+            "timeout": 5,
+            "statusMessage": "Checking test-before-fix rule..."
+          },
+          {
+            "type": "command",
+            "command": "bash $CLAUDE_PROJECT_DIR/.claude/hooks/enforce-phase-gate.sh",
+            "timeout": 5,
+            "statusMessage": "Checking approval gates..."
+          },
+          {
+            "type": "command",
+            "command": "bash $CLAUDE_PROJECT_DIR/.claude/hooks/enforce-no-direct-impl.sh",
+            "timeout": 5,
+            "statusMessage": "Checking delegation rule..."
+          }
+        ]
+      },
+      {
+        "matcher": "Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash $CLAUDE_PROJECT_DIR/.claude/hooks/enforce-research-first.sh",
+            "timeout": 5,
+            "statusMessage": "Checking research-first rule..."
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash $CLAUDE_PROJECT_DIR/.claude/hooks/update-task-state.sh",
+            "timeout": 5,
+            "statusMessage": "Updating task state..."
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash $CLAUDE_PROJECT_DIR/.claude/hooks/enforce-regression.sh",
+            "timeout": 5,
+            "statusMessage": "Checking regression requirements..."
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "prompt",
+            "prompt": "Review the conversation above. The coordinator workflow requires the devil's advocate agent to be spawned in EVERY phase. Check:\n\n1. What phase is the task currently in?\n2. Was a 'devils-advocate' agent spawned during this phase?\n3. If DA was spawned, were challenges filed with categories (correctness/security/performance/scope/edge-cases) and marked as blocking or advisory?\n\nIf the devil's advocate was NOT invoked in the current phase and the phase is about to complete, respond with ONLY this text:\n\nDA VIOLATION: Devil's advocate was not invoked in this phase. Spawn the devils-advocate agent before concluding this phase.\n\nIf the devil's advocate WAS properly invoked, respond with ONLY: OK",
+            "timeout": 15,
+            "statusMessage": "Checking DA coverage..."
+          },
+          {
+            "type": "prompt",
+            "prompt": "Review the conversation above. Check if the coordinator is about to conclude a response without updating the task state file (.claude/project-state/tasks/active/TASK-*.md). The task file MUST be updated at every phase transition with the current phase number and status.\n\nIf a phase transition occurred but the task file was NOT updated, respond with ONLY:\n\nSTATE VIOLATION: Task file not updated after phase transition. Update the task file with current phase and status before concluding.\n\nIf the task file was updated or no phase transition occurred, respond with ONLY: OK",
+            "timeout": 15,
+            "statusMessage": "Checking state management..."
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "prompt",
+            "prompt": "Review this subagent's work. Check:\n\n1. If this was the 'tester' agent: Are all tests asserting on observable BEHAVIOR (outputs, rendered content, side effects) rather than IMPLEMENTATION details (internal state, private methods, call counts, mock internals)? If any test is implementation-coupled, respond with:\n\nTEST QUALITY WARNING: Test(s) appear to assert on implementation details rather than behavior. Flag for review.\n\n2. If this was the 'implementer' or 'frontend-dev' agent: Did they write MORE code than needed to pass the failing tests? The rule is MINIMUM code to make tests green. If they added unrequested features, extra error handling not in tests, or speculative code, respond with:\n\nMINIMUM CODE WARNING: Implementation appears to exceed what's needed to pass the failing tests. Review for over-engineering.\n\n3. If this was the 'devils-advocate' agent: Did they file challenges in at least 2 categories with blocking/advisory markers? If not, respond with:\n\nDA FORMAT WARNING: Challenges must be filed in 2+ categories with blocking/advisory markers.\n\nIf everything looks correct, respond with ONLY: OK",
+            "timeout": 20,
+            "statusMessage": "Reviewing agent output..."
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'CWD=\"$(pwd)\"; STATE_DIR=\"$CWD/.claude/project-state\"; if [ -d \"$STATE_DIR\" ]; then echo \"Project state detected at $STATE_DIR\"; ACTIVE=$(find \"$STATE_DIR/tasks/active\" -name \"TASK-*.md\" 2>/dev/null | wc -l | tr -d \" \"); DONE=$(find \"$STATE_DIR/tasks/done\" -name \"TASK-*.md\" 2>/dev/null | wc -l | tr -d \" \"); echo \"Active tasks: $ACTIVE | Completed: $DONE\"; if [ -f \"$STATE_DIR/PROJECT.md\" ]; then head -5 \"$STATE_DIR/PROJECT.md\"; fi; fi'",
+            "timeout": 5,
+            "statusMessage": "Loading project state..."
+          }
+        ]
+      }
+    ]
+  }
+}
