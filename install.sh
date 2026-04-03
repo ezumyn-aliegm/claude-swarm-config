@@ -38,6 +38,15 @@ mkdir -p "$CLAUDE_DIR/hooks"
 cp "$SCRIPT_DIR/hooks/"*.sh "$CLAUDE_DIR/hooks/"
 chmod +x "$CLAUDE_DIR/hooks/"*.sh
 echo "  Copied $(ls "$SCRIPT_DIR/hooks/"*.sh | wc -l | tr -d ' ') hooks"
+echo "  Hooks:"
+echo "    enforce-tdd.sh              — TDD phase enforcement"
+echo "    enforce-test-before-fix.sh  — test-before-fix in Phase 5"
+echo "    enforce-phase-gate.sh       — approval gate enforcement"
+echo "    enforce-no-direct-impl.sh   — coordinator delegation + config protection"
+echo "    enforce-research-first.sh   — research-before-implementation"
+echo "    enforce-regression.sh       — full regression reminder in Phase 5"
+echo "    enforce-safe-commands.sh    — blocks dangerous shell commands"
+echo "    update-task-state.sh        — agent invocation tracking"
 
 # Install settings.json (project-level — copy to current project or user-level)
 echo ""
@@ -85,6 +94,11 @@ fi
 
 echo ""
 echo "Installation complete!"
+echo ""
+echo "Task tracking:"
+echo "  Hooks use .claude/project-state/current-task.txt to identify the active task."
+echo "  Write the task ID (e.g., TASK-001) to this file to set the current task pointer."
+echo "  If current-task.txt is absent, hooks fall back to finding a single active task."
 echo ""
 echo "To enable hooks in a project, copy hooks into the project:"
 echo "  cd ~/your-project"

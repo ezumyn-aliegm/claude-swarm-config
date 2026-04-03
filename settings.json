@@ -6,25 +6,25 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash $CLAUDE_PROJECT_DIR/.claude/hooks/enforce-tdd.sh",
+            "command": "bash $HOME/.claude/hooks/enforce-tdd.sh",
             "timeout": 5,
             "statusMessage": "Checking TDD compliance..."
           },
           {
             "type": "command",
-            "command": "bash $CLAUDE_PROJECT_DIR/.claude/hooks/enforce-test-before-fix.sh",
+            "command": "bash $HOME/.claude/hooks/enforce-test-before-fix.sh",
             "timeout": 5,
             "statusMessage": "Checking test-before-fix rule..."
           },
           {
             "type": "command",
-            "command": "bash $CLAUDE_PROJECT_DIR/.claude/hooks/enforce-phase-gate.sh",
+            "command": "bash $HOME/.claude/hooks/enforce-phase-gate.sh",
             "timeout": 5,
             "statusMessage": "Checking approval gates..."
           },
           {
             "type": "command",
-            "command": "bash $CLAUDE_PROJECT_DIR/.claude/hooks/enforce-no-direct-impl.sh",
+            "command": "bash $HOME/.claude/hooks/enforce-no-direct-impl.sh",
             "timeout": 5,
             "statusMessage": "Checking delegation rule..."
           }
@@ -35,9 +35,20 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash $CLAUDE_PROJECT_DIR/.claude/hooks/enforce-research-first.sh",
+            "command": "bash $HOME/.claude/hooks/enforce-research-first.sh",
             "timeout": 5,
             "statusMessage": "Checking research-first rule..."
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash $HOME/.claude/hooks/enforce-safe-commands.sh",
+            "timeout": 5,
+            "statusMessage": "Checking command safety..."
           }
         ]
       }
@@ -48,7 +59,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash $CLAUDE_PROJECT_DIR/.claude/hooks/update-task-state.sh",
+            "command": "bash $HOME/.claude/hooks/update-task-state.sh",
             "timeout": 5,
             "statusMessage": "Updating task state..."
           }
@@ -59,7 +70,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash $CLAUDE_PROJECT_DIR/.claude/hooks/enforce-regression.sh",
+            "command": "bash $HOME/.claude/hooks/enforce-regression.sh",
             "timeout": 5,
             "statusMessage": "Checking regression requirements..."
           }
@@ -71,7 +82,7 @@
         "hooks": [
           {
             "type": "prompt",
-            "prompt": "Review the conversation above. The coordinator workflow requires the devil's advocate agent to be spawned in EVERY phase. Check:\n\n1. What phase is the task currently in?\n2. Was a 'devils-advocate' agent spawned during this phase?\n3. If DA was spawned, were challenges filed with categories (correctness/security/performance/scope/edge-cases) and marked as blocking or advisory?\n\nIf the devil's advocate was NOT invoked in the current phase and the phase is about to complete, respond with ONLY this text:\n\nDA VIOLATION: Devil's advocate was not invoked in this phase. Spawn the devils-advocate agent before concluding this phase.\n\nIf the devil's advocate WAS properly invoked, respond with ONLY: OK",
+            "prompt": "Review the conversation above. First, check the active task file (.claude/project-state/tasks/active/) to determine the task type, size, and current phase. Consult the triage matrix: Config tasks do not require DA in any phase. Research/Spike tasks only need DA in Phase 1. Feature/S tasks need DA only where included in their phase sequence (0→2→3→3.5→4→5→6). Refactor/S tasks (0→4→6) only need DA where included. Only flag a DA violation if DA is REQUIRED for this specific task type, size, and phase AND was not invoked.\n\nCheck:\n1. What phase is the task currently in?\n2. What is the task type and size?\n3. Is DA required for this task type, size, and phase per the triage matrix?\n4. If DA is required, was a 'devils-advocate' agent spawned during this phase?\n5. If DA was spawned, were challenges filed with categories (correctness/security/performance/scope/edge-cases) and marked as blocking or advisory?\n\nIf DA is REQUIRED for this specific task type, size, and phase AND the devil's advocate was NOT invoked, respond with ONLY this text:\n\nDA VIOLATION: Devil's advocate was not invoked in this phase. Spawn the devils-advocate agent before concluding this phase.\n\nIf DA is not required for this task type/size/phase, or if the devil's advocate WAS properly invoked, respond with ONLY: OK",
             "timeout": 15,
             "statusMessage": "Checking DA coverage..."
           },
@@ -101,7 +112,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'CWD=\"$(pwd)\"; STATE_DIR=\"$CWD/.claude/project-state\"; if [ -d \"$STATE_DIR\" ]; then echo \"Project state detected at $STATE_DIR\"; ACTIVE=$(find \"$STATE_DIR/tasks/active\" -name \"TASK-*.md\" 2>/dev/null | wc -l | tr -d \" \"); DONE=$(find \"$STATE_DIR/tasks/done\" -name \"TASK-*.md\" 2>/dev/null | wc -l | tr -d \" \"); echo \"Active tasks: $ACTIVE | Completed: $DONE\"; if [ -f \"$STATE_DIR/PROJECT.md\" ]; then head -5 \"$STATE_DIR/PROJECT.md\"; fi; fi'",
+            "command": "bash -c 'CWD=\"$(pwd)\"; STATE_DIR=\"$CWD/.claude/project-state\"; if [ -d \"$STATE_DIR\" ]; then echo \"Project state detected at $STATE_DIR\"; ACTIVE=$(find \"$STATE_DIR/tasks/active\" -name \"TASK-*.md\" 2>/dev/null | wc -l | tr -d \" \"); DONE=$(find \"$STATE_DIR/tasks/done\" -name \"TASK-*.md\" 2>/dev/null | wc -l | tr -d \" \"); echo \"Active tasks: $ACTIVE | Completed: $DONE\"; if [ -f \"$STATE_DIR/current-task.txt\" ]; then echo \"Current task: $(cat $STATE_DIR/current-task.txt)\"; fi; if [ -f \"$STATE_DIR/PROJECT.md\" ]; then head -5 \"$STATE_DIR/PROJECT.md\"; fi; fi'",
             "timeout": 5,
             "statusMessage": "Loading project state..."
           }

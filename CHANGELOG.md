@@ -1,5 +1,24 @@
 # Changelog
 
+## [1.2.0] - 2026-03-31
+
+### Fixed
+- macOS compatibility: replaced all `grep -oP` (GNU-only) with portable `grep | sed` in every hook
+- Non-deterministic task selection: hooks now read `current-task.txt` pointer instead of `find | head -1`
+- `enforce-test-before-fix.sh`: checks if ANY file in the diff is a test, not just `tail -1`
+- CSS/SCSS exemption removed from `enforce-tdd.sh` — style files now require TDD compliance
+
+### Added
+- `enforce-safe-commands.sh` — blocks destructive shell commands, force pushes, config tampering, curl-pipe-bash, and extension-rename gaming
+- Config file protection in `enforce-no-direct-impl.sh` — blocks all modifications to orchestration configs (coordinator-prompt.md, settings.json, agents/) even by subagents
+- Task-type awareness in DA Stop hook — consults triage matrix so Config tasks, Research/Spike Phase 1-only, and size-appropriate phase sequences are respected
+- mkdir-based file locking in `update-task-state.sh` for concurrent safety on macOS
+- `current-task.txt` documentation in install script
+- SessionStart hook now displays current task pointer if present
+
+### Changed
+- All hook paths in `settings.json` changed from `$CLAUDE_PROJECT_DIR/.claude/hooks/` to `$HOME/.claude/hooks/`
+
 ## [1.1.0] - 2026-03-31
 
 ### Added

@@ -31,8 +31,18 @@ if [[ "$IS_IMPL" != "true" ]]; then
     exit 0
 fi
 
-# Check for active task
-ACTIVE_TASK=$(find "$CWD/.claude/project-state/tasks/active" -name "TASK-*.md" 2>/dev/null | head -1)
+# Read current task pointer
+CURRENT_TASK_FILE="$CWD/.claude/project-state/current-task.txt"
+if [[ -f "$CURRENT_TASK_FILE" ]]; then
+    TASK_ID=$(cat "$CURRENT_TASK_FILE" | tr -d '[:space:]')
+    ACTIVE_TASK="$CWD/.claude/project-state/tasks/active/${TASK_ID}.md"
+    if [[ ! -f "$ACTIVE_TASK" ]]; then
+        ACTIVE_TASK=""
+    fi
+else
+    # Fallback: single active task
+    ACTIVE_TASK=$(find "$CWD/.claude/project-state/tasks/active" -name "TASK-*.md" 2>/dev/null | head -1)
+fi
 
 if [[ -z "$ACTIVE_TASK" ]]; then
     exit 0  # No task tracking, can't enforce
@@ -45,8 +55,8 @@ TASK_NUM=$(basename "$ACTIVE_TASK" .md)
 RESEARCH_BRIEF=$(find "$CWD/.claude/project-state/artifacts" -name "${TASK_NUM}-research-brief-*" 2>/dev/null | head -1)
 
 # Check task type — config changes and S-size features skip research
-TASK_TYPE=$(grep -oP '(?<=\*\*Type:\*\* )\S+' "$ACTIVE_TASK" 2>/dev/null || echo "")
-TASK_SIZE=$(grep -oP '(?<=\*\*Size:\*\* )\S+' "$ACTIVE_TASK" 2>/dev/null || echo "")
+TASK_TYPE=$(grep '\*\*Type:\*\*' "$ACTIVE_TASK" | sed 's/.*\*\*Type:\*\* //' | sed 's/ .*//' 2>/dev/null || echo "")
+TASK_SIZE=$(grep '\*\*Size:\*\*' "$ACTIVE_TASK" | sed 's/.*\*\*Size:\*\* //' | sed 's/ .*//' 2>/dev/null || echo "")
 
 if [[ "$TASK_TYPE" == "Config" ]]; then
     exit 0  # Config changes skip research

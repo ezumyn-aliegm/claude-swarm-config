@@ -26,7 +26,7 @@ if echo "$FILE_PATH" | grep -qiE '(\.test\.|\.spec\.|__tests__|test_|_test\.|\bt
 fi
 
 # Skip if writing to non-code files (configs, docs, etc.)
-if echo "$FILE_PATH" | grep -qiE '\.(md|json|yaml|yml|toml|txt|css|scss|svg|png|jpg|ico|env)$'; then
+if echo "$FILE_PATH" | grep -qiE '\.(md|json|yaml|yml|toml|txt|svg|png|jpg|ico|env)$'; then
     exit 0
 fi
 
@@ -45,12 +45,22 @@ fi
 SOURCE_BASENAME=$(basename "$FILE_PATH" | sed 's/\.[^.]*$//')
 TEST_FILES=$(find "$CWD" -type f \( -name "*.test.*" -o -name "*.spec.*" -o -name "*_test.*" \) 2>/dev/null | head -5)
 
-# Check for a task file that tracks the current phase
-ACTIVE_TASK=$(find "$CWD/.claude/project-state/tasks/active" -name "TASK-*.md" 2>/dev/null | head -1)
+# Read current task pointer
+CURRENT_TASK_FILE="$CWD/.claude/project-state/current-task.txt"
+if [[ -f "$CURRENT_TASK_FILE" ]]; then
+    TASK_ID=$(cat "$CURRENT_TASK_FILE" | tr -d '[:space:]')
+    ACTIVE_TASK="$CWD/.claude/project-state/tasks/active/${TASK_ID}.md"
+    if [[ ! -f "$ACTIVE_TASK" ]]; then
+        ACTIVE_TASK=""
+    fi
+else
+    # Fallback: single active task
+    ACTIVE_TASK=$(find "$CWD/.claude/project-state/tasks/active" -name "TASK-*.md" 2>/dev/null | head -1)
+fi
 
 if [[ -n "$ACTIVE_TASK" ]]; then
-    CURRENT_PHASE=$(grep -oP '(?<=\*\*Phase:\*\* )[\d.]+' "$ACTIVE_TASK" 2>/dev/null || echo "")
-    CURRENT_STATUS=$(grep -oP '(?<=\*\*Status:\*\* )\w+' "$ACTIVE_TASK" 2>/dev/null || echo "")
+    CURRENT_PHASE=$(grep '\*\*Phase:\*\*' "$ACTIVE_TASK" | sed 's/.*\*\*Phase:\*\* //' | sed 's/ .*//' 2>/dev/null || echo "")
+    CURRENT_STATUS=$(grep '\*\*Status:\*\*' "$ACTIVE_TASK" | sed 's/.*\*\*Status:\*\* //' | sed 's/ .*//' 2>/dev/null || echo "")
 
     # If we're in Phase 3.5 (green) or Phase 4 (refactor), implementation is allowed
     if [[ "$CURRENT_PHASE" == "3.5" || "$CURRENT_PHASE" == "4" || "$CURRENT_PHASE" == "5" ]]; then

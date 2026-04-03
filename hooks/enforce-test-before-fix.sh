@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Hook: PreToolUse on Write|Edit
 # Enforces "never fix without a test" — during Phase 5 validation,
-# blocks implementation edits if the most recent change wasn't a test file.
+# blocks implementation edits if no test file exists in the changeset.
 
 set -euo pipefail
 
@@ -31,28 +31,33 @@ if echo "$FILE_PATH" | grep -qiE '\.claude/project-state/'; then
 fi
 
 # Only enforce during Phase 5 (validation)
-ACTIVE_TASK=$(find "$CWD/.claude/project-state/tasks/active" -name "TASK-*.md" 2>/dev/null | head -1)
+# Read current task pointer
+CURRENT_TASK_FILE="$CWD/.claude/project-state/current-task.txt"
+if [[ -f "$CURRENT_TASK_FILE" ]]; then
+    TASK_ID=$(cat "$CURRENT_TASK_FILE" | tr -d '[:space:]')
+    ACTIVE_TASK="$CWD/.claude/project-state/tasks/active/${TASK_ID}.md"
+    if [[ ! -f "$ACTIVE_TASK" ]]; then
+        ACTIVE_TASK=""
+    fi
+else
+    # Fallback: single active task
+    ACTIVE_TASK=$(find "$CWD/.claude/project-state/tasks/active" -name "TASK-*.md" 2>/dev/null | head -1)
+fi
 
 if [[ -z "$ACTIVE_TASK" ]]; then
     exit 0
 fi
 
-CURRENT_PHASE=$(grep -oP '(?<=\*\*Phase:\*\* )[\d.]+' "$ACTIVE_TASK" 2>/dev/null || echo "")
+CURRENT_PHASE=$(grep '\*\*Phase:\*\*' "$ACTIVE_TASK" | sed 's/.*\*\*Phase:\*\* //' | sed 's/ .*//' 2>/dev/null || echo "")
 
 if [[ "$CURRENT_PHASE" != "5" ]]; then
     exit 0
 fi
 
-# During Phase 5, check if the last git change was a test file
-LAST_CHANGED=$(git -C "$CWD" diff --name-only HEAD 2>/dev/null | tail -1)
-LAST_STAGED=$(git -C "$CWD" diff --cached --name-only 2>/dev/null | tail -1)
-LAST_FILE="${LAST_STAGED:-$LAST_CHANGED}"
-
-if [[ -n "$LAST_FILE" ]]; then
-    if echo "$LAST_FILE" | grep -qiE '(\.test\.|\.spec\.|__tests__|test_|_test\.|\btests/)'; then
-        # Last change was a test file — implementation fix is allowed
-        exit 0
-    fi
+# During Phase 5, check if ANY file in the diff is a test file
+ALL_CHANGED=$(git -C "$CWD" diff --name-only HEAD 2>/dev/null; git -C "$CWD" diff --cached --name-only 2>/dev/null)
+if echo "$ALL_CHANGED" | grep -qiE '(\.test\.|\.spec\.|__tests__|test_|_test\.|\btests/)'; then
+    exit 0  # A test file exists in the changeset
 fi
 
 echo "TDD VIOLATION (Phase 5): Bug fixes require a failing test FIRST. Write a test that reproduces the bug, then fix the implementation." >&2

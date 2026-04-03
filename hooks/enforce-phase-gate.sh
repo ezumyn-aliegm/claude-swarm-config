@@ -23,14 +23,24 @@ if echo "$FILE_PATH" | grep -qiE '\.claude/project-state/'; then
     exit 0
 fi
 
-# Check for active task
-ACTIVE_TASK=$(find "$CWD/.claude/project-state/tasks/active" -name "TASK-*.md" 2>/dev/null | head -1)
+# Read current task pointer
+CURRENT_TASK_FILE="$CWD/.claude/project-state/current-task.txt"
+if [[ -f "$CURRENT_TASK_FILE" ]]; then
+    TASK_ID=$(cat "$CURRENT_TASK_FILE" | tr -d '[:space:]')
+    ACTIVE_TASK="$CWD/.claude/project-state/tasks/active/${TASK_ID}.md"
+    if [[ ! -f "$ACTIVE_TASK" ]]; then
+        ACTIVE_TASK=""
+    fi
+else
+    # Fallback: single active task
+    ACTIVE_TASK=$(find "$CWD/.claude/project-state/tasks/active" -name "TASK-*.md" 2>/dev/null | head -1)
+fi
 
 if [[ -z "$ACTIVE_TASK" ]]; then
     exit 0
 fi
 
-CURRENT_STATUS=$(grep -oP '(?<=\*\*Status:\*\* )\S+' "$ACTIVE_TASK" 2>/dev/null || echo "")
+CURRENT_STATUS=$(grep '\*\*Status:\*\*' "$ACTIVE_TASK" | sed 's/.*\*\*Status:\*\* //' | sed 's/ .*//' 2>/dev/null || echo "")
 
 # Block if awaiting user approval
 if [[ "$CURRENT_STATUS" == "awaiting-approval" ]]; then

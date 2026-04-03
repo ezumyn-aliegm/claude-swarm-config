@@ -2,6 +2,7 @@
 # Hook: PreToolUse on Write|Edit
 # Enforces "coordinator never implements" — blocks the coordinator from writing
 # code directly instead of delegating to agents.
+# Also protects orchestration config files from ALL modifications during swarm sessions.
 # Only active when running with the coordinator prompt (swarm aliases).
 
 set -euo pipefail
@@ -14,6 +15,12 @@ AGENT_ID=$(echo "$INPUT" | jq -r '.agent_id // ""')
 # Only enforce on Write and Edit
 if [[ "$TOOL_NAME" != "Write" && "$TOOL_NAME" != "Edit" ]]; then
     exit 0
+fi
+
+# Block ALL modifications to orchestration config files, even by agents
+if echo "$FILE_PATH" | grep -qiE '(coordinator-prompt\.md|\.claude/settings\.json|\.claude/settings\.local\.json|\.claude/agents/)'; then
+    echo "CONFIG PROTECTION: Orchestration configuration files cannot be modified during a swarm session." >&2
+    exit 2
 fi
 
 # If this is a subagent (has agent_id), allow — agents ARE supposed to write code

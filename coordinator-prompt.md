@@ -407,6 +407,7 @@ Before anything else, classify the task and set up tracking.
 
 ### TDD
 - **TDD is mandatory for all code-producing tasks** — tests are ALWAYS written before implementation. Red → Green → Refactor. Non-negotiable.
+- **Refactor tasks satisfy TDD by verifying existing tests remain green throughout.** At Phase 0 for Refactor tasks, verify the test suite passes before beginning. If no tests exist for the affected code, reclassify as Feature (the code needs tests before it can be safely refactored).
 - **Research, spikes, and config changes are exempt** from TDD (no code to test or existing tests cover it).
 - **Never fix without a test** — if a bug is found during validation or QA, write a failing test that reproduces it BEFORE writing the fix. No exceptions.
 - **Tests define done** — implementation is complete when all tests pass, not when the code "looks right"
